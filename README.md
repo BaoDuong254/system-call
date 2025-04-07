@@ -37,7 +37,9 @@ git checkout -b your-branch-name
 Push your branch to GitHub:
 
 ```bash
+git add .
+git commit -m 'you message'
 git push -u origin your-branch-name
 ```
 
-Then, go to the repository on GitHub and create a Pull Request (PR) into the main branch.
+Then, go to the repository on GitHub and create a Pull Request (PR) into the main branch. Remember to add description about your change.

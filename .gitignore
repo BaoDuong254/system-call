@@ -89,7 +89,6 @@ CMakeUserPresets.json
 # External projects
 *-prefix/
 
-.vscode/
 .DS_Store
 .code-workspace
 *.lst

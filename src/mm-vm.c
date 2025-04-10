@@ -60,7 +60,10 @@ struct vm_rg_struct *get_vm_area_node_at_brk(struct pcb_t *caller, int vmaid, in
         return NULL;
     }
     newrg = malloc(sizeof(struct vm_rg_struct));
-
+    if (newrg == NULL)
+    {
+        return NULL;
+    }
     /* TODO: update the newrg boundary
     // newrg->rg_start = ...
     // newrg->rg_end = ...
@@ -68,7 +71,7 @@ struct vm_rg_struct *get_vm_area_node_at_brk(struct pcb_t *caller, int vmaid, in
     newrg->rg_start = cur_vma->sbrk;
     newrg->rg_end = newrg->rg_start + alignedsz;
     newrg->rg_next = NULL;
-    cur_vma->sbrk += alignedsz;
+    cur_vma->sbrk = newrg->rg_end;
     return newrg;
 }
 
@@ -114,6 +117,10 @@ int inc_vma_limit(struct pcb_t *caller, int vmaid, int inc_sz)
     struct vm_rg_struct *area = get_vm_area_node_at_brk(caller, vmaid, inc_sz, inc_amt);
     struct vm_area_struct *cur_vma = get_vma_by_num(caller->mm, vmaid);
 
+    if (!area || !cur_vma)
+    {
+        return -1;
+    }
     int old_end = cur_vma->vm_end;
 
     /*Validate overlap of obtained region */

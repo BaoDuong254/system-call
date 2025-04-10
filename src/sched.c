@@ -75,7 +75,6 @@ struct pcb_t *get_mlq_proc(void)
             slot[prio] = MAX_PRIO - prio;
         }
 
-        // Thử lại vòng for sau khi reset
         for (int prio = 0; prio < MAX_PRIO; prio++)
         {
             if (!empty(&mlq_ready_queue[prio]))

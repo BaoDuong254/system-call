@@ -23,8 +23,8 @@ int init_pte(uint32_t *pte,
     {
         if (swp == 0)
         { // Non swap ~ page online
-            if (fpn == 0)
-                return -1; // Invalid setting
+            // if (fpn == 0)
+            //     return -1; // Invalid setting
 
             /* Valid setting with FPN */
             SETBIT(*pte, PAGING_PTE_PRESENT_MASK);
@@ -104,26 +104,18 @@ int vmap_page_range(struct pcb_t *caller,           // process call
      *      [addr to addr + pgnum*PAGING_PAGESZ
      *      in page table caller->mm->pgd[]
      */
-
-    /* Tracking for later page replacement activities (if needed)
-     * Enqueue new usage page */
     for (pgit = 0; pgit < pgnum; pgit++)
     {
         if (fpit == NULL)
         {
             return -1;
         }
-        int temp_addr = addr + pgit * PAGING_PAGESZ;
-        pgn = PAGING_PGN(temp_addr);
-        pte_set_fpn(&(caller->mm->pgd[pgn]), fpit->fpn);
-
-        struct framephy_struct *mapped_fp = fpit;
+        init_pte(&caller->mm->pgd[pgn + pgit], 1, fpit->fpn, 0, 0, 0, 0);
+        enlist_pgn_node(&caller->mm->fifo_pgn, pgn + pgit);
         fpit = fpit->fp_next;
-        free(mapped_fp);
-
-        enlist_pgn_node(&caller->mm->fifo_pgn, pgn);
     }
-
+    /* Tracking for later page replacement activities (if needed)
+     * Enqueue new usage page */
     return 0;
 }
 
@@ -153,35 +145,14 @@ int alloc_pages_range(struct pcb_t *caller, int req_pgnum, struct framephy_struc
             newfp->owner = caller->mm;
             newfp->fp_next = newfp_str;
             newfp_str = newfp;
+            *frm_lst = newfp_str;
         }
         else
         {
             // TODO: ERROR CODE of obtaining somes but not enough frames
-            int vicpgn, swpfpn;
-            if (find_victim_page(caller->mm, &vicpgn) == -1 || MEMPHY_get_freefp(caller->active_mswp, &swpfpn) == -1)
-            {
-                while (newfp_str != NULL)
-                {
-                    MEMPHY_put_freefp(caller->mram, newfp_str->fpn);
-                    struct framephy_struct *remain_fp_str = newfp_str->fp_next;
-                    free(newfp_str);
-                    newfp_str = remain_fp_str;
-                }
-                return -1;
-            }
-            uint32_t vicpte = caller->mm->pgd[vicpgn];
-            int vicfpn = PAGING_FPN(vicpte);
-            __swap_cp_page(caller->mram, vicfpn, caller->active_mswp, swpfpn);
-            pte_set_swap(&caller->mm->pgd[vicpgn], 0, swpfpn);
-
-            struct framephy_struct *newfp = malloc(sizeof(struct framephy_struct));
-            newfp->fpn = vicfpn;
-            newfp->owner = caller->mm;
-            newfp->fp_next = newfp_str;
-            newfp_str = newfp;
+            return -3000;
         }
     }
-    *frm_lst = newfp_str;
     return 0;
 }
 
@@ -416,7 +387,13 @@ int print_pgtbl(struct pcb_t *caller, uint32_t start, uint32_t end)
     {
         printf("%08ld: %08x\n", pgit * sizeof(uint32_t), caller->mm->pgd[pgit]);
     }
-
+    
+    //* Print Page Number and Frame Number
+    for (pgit = pgn_start; pgit < pgn_end; pgit++)
+    {
+        printf("Page Number: %d -> Frame Number: %d\n", pgit, PAGING_FPN(caller->mm->pgd[pgit]));
+    }
+    printf("================================================================\n");
     return 0;
 }
 

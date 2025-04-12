@@ -68,12 +68,8 @@ struct vm_rg_struct *get_symrg_byid(struct mm_struct *mm, int rgid)
  */
 int __alloc(struct pcb_t *caller, int vmaid, int rgid, int size, int *alloc_addr)
 {
-    pthread_mutex_lock(&mmvm_lock);
-    /*Allocate at the toproof */
     struct vm_rg_struct rgnode;
-
-    /* TODO: commit the vmaid */
-    // rgnode.vmaid
+    pthread_mutex_lock(&mmvm_lock);
 
     if (get_free_vmrg_area(caller, vmaid, size, &rgnode) == 0)
     {
@@ -83,43 +79,48 @@ int __alloc(struct pcb_t *caller, int vmaid, int rgid, int size, int *alloc_addr
         *alloc_addr = rgnode.rg_start;
 
         pthread_mutex_unlock(&mmvm_lock);
-        return 0;
     }
-
-    /* TODO get_free_vmrg_area FAILED handle the region management (Fig.6)*/
-
-    /* TODO retrive current vma if needed, current comment out due to compiler redundant warning*/
-    /*Attempt to increate limit to get space */
-    struct vm_area_struct *cur_vma = get_vma_by_num(caller->mm, vmaid);
-    if (cur_vma == NULL)
+    else
     {
-        pthread_mutex_unlock(&mmvm_lock);
-        return -1;
+        struct vm_area_struct *cur_vma = get_vma_by_num(caller->mm, vmaid);
+        if (cur_vma == NULL)
+        {
+            pthread_mutex_unlock(&mmvm_lock);
+            return -1;
+        }
+
+        int inc_sz = PAGING_PAGE_ALIGNSZ(size);
+
+        int old_sbrk = cur_vma->sbrk;
+
+        struct sc_regs regs;
+        regs.a1 = SYSMEM_INC_OP;
+        regs.a2 = vmaid;
+        regs.a3 = inc_sz;
+
+        syscall(caller, 17, &regs);
+        cur_vma->sbrk = old_sbrk + inc_sz;
+        *alloc_addr = old_sbrk;
+        if (get_free_vmrg_area(caller, vmaid, size, &rgnode) == 0)
+        {
+            caller->mm->symrgtbl[rgid].rg_start = old_sbrk;
+            caller->mm->symrgtbl[rgid].rg_end = old_sbrk + inc_sz;
+            pthread_mutex_unlock(&mmvm_lock);
+        }
+        else
+        {
+            pthread_mutex_unlock(&mmvm_lock);
+            return -1;
+        }
     }
-
-    int inc_sz = PAGING_PAGE_ALIGNSZ(size);
-
-    /* TODO retrive old_sbrk if needed, current comment out due to compiler redundant warning*/
-    int old_sbrk = cur_vma->sbrk;
-
-    /* TODO INCREASE THE LIMIT as inovking systemcall
-     * sys_memap with SYSMEM_INC_OP
-     */
-    struct sc_regs regs;
-    regs.a1 = SYSMEM_INC_OP;
-    regs.a2 = vmaid;
-    regs.a3 = inc_sz;
-
-    /* SYSCALL 17 sys_memmap */
-    __sys_memmap(caller, &regs);
-    cur_vma->sbrk += inc_sz;
-    /* TODO: commit the limit increment */
-    caller->mm->symrgtbl[rgid].rg_start = old_sbrk;
-    caller->mm->symrgtbl[rgid].rg_end = old_sbrk + inc_sz;
-    /* TODO: commit the allocation address
-     */
-    *alloc_addr = old_sbrk;
-    pthread_mutex_unlock(&mmvm_lock);
+    printf("===== PHYSICAL MEMORY AFTER ALLOCATION =====\n");
+#ifdef IODUMP
+    printf("PID=%d - Region=%d - Address=%08lx - Size=%d byte\n",
+           caller->pid, rgid, (unsigned long)*alloc_addr, size);
+#ifdef PAGETBL_DUMP
+    print_pgtbl(caller, 0, -1);
+#endif
+#endif
     return 0;
 }
 
@@ -157,7 +158,14 @@ int __free(struct pcb_t *caller, int vmaid, int rgid)
 
     caller->mm->symrgtbl[rgid].rg_start = 0;
     caller->mm->symrgtbl[rgid].rg_end = 0;
-
+    printf("===== PHYSICAL MEMORY AFTER DEALLOCATION =====\n");
+#ifdef IODUMP
+    printf("PID=%d - Region=%d\n",
+           caller->pid, rgid);
+#ifdef PAGETBL_DUMP
+    print_pgtbl(caller, 0, -1); // print max TBL
+#endif
+#endif
     return 0;
 }
 
@@ -170,7 +178,7 @@ int liballoc(struct pcb_t *proc, uint32_t size, uint32_t reg_index)
 {
     /* TODO Implement allocation on vm area 0 */
     int addr;
-    
+
     /* By default using vmaid = 0 */
     return __alloc(proc, 0, reg_index, size, &addr);
 }
@@ -215,7 +223,12 @@ int pg_getpage(struct mm_struct *mm, int pgn, int *fpn, struct pcb_t *caller)
         regs_out.a1 = SYSMEM_SWP_OP;
         regs_out.a2 = vicfpn;
         regs_out.a3 = swpfpn;
-        __sys_memmap(caller, &regs_out);
+        int status = syscall(caller, 17, &regs_out);
+        if (status != 0)
+        {
+            pthread_mutex_unlock(&mmvm_lock);
+            return status;
+        }
 
         pte_set_swap(&mm->pgd[vicpgn], caller->active_mswp_id, swpfpn);
 
@@ -227,7 +240,12 @@ int pg_getpage(struct mm_struct *mm, int pgn, int *fpn, struct pcb_t *caller)
         regs_in.a1 = SYSMEM_SWP_OP;
         regs_in.a2 = tgt_swpoff;
         regs_in.a3 = tgtfpn;
-        __sys_memmap(caller, &regs_in);
+        status = syscall(caller, 17, &regs_in);
+        if (status != 0)
+        {
+            pthread_mutex_unlock(&mmvm_lock);
+            return status;
+        }
 
         pte_set_fpn(&mm->pgd[pgn], tgtfpn);
         PAGING_PTE_SET_PRESENT(mm->pgd[pgn]);
@@ -269,10 +287,14 @@ int pg_getval(struct mm_struct *mm, int addr, BYTE *data, struct pcb_t *caller)
     regs.a3 = phyaddr;
 
     /* SYSCALL 17 sys_memmap */
-    __sys_memmap(caller, &regs);
+    int status = syscall(caller, 17, &regs);
+    if (status != 0)
+    {
+        pthread_mutex_unlock(&mmvm_lock);
+        return status;
+    }
     // Update data
     // data = (BYTE)
-    // *data = tmp;
 
     return 0;
 }
@@ -305,7 +327,12 @@ int pg_setval(struct mm_struct *mm, int addr, BYTE value, struct pcb_t *caller)
     regs.a3 = phyaddr;
 
     /* SYSCALL 17 sys_memmap */
-    __sys_memmap(caller, &regs);
+    int status = syscall(caller, 17, &regs);
+    if (status != 0)
+    {
+        pthread_mutex_unlock(&mmvm_lock);
+        return status;
+    }
     // Update data
     // data = (BYTE)
 
@@ -329,7 +356,6 @@ int __read(struct pcb_t *caller, int vmaid, int rgid, int offset, BYTE *data)
         return -1;
 
     pg_getval(caller->mm, currg->rg_start + offset, data, caller);
-
     return 0;
 }
 
@@ -347,6 +373,7 @@ int libread(
     // destination
     *destination = data;
 #ifdef IODUMP
+    printf("===== PHYSICAL MEMORY AFTER READING =====\n");
     printf("read region=%d offset=%d value=%d\n", source, offset, data);
 #ifdef PAGETBL_DUMP
     print_pgtbl(proc, 0, -1); // print max TBL
@@ -374,7 +401,6 @@ int __write(struct pcb_t *caller, int vmaid, int rgid, int offset, BYTE value)
         return -1;
 
     pg_setval(caller->mm, currg->rg_start + offset, value, caller);
-
     return 0;
 }
 
@@ -386,7 +412,9 @@ int libwrite(
     uint32_t offset)
 {
     int write = __write(proc, 0, destination, offset, data);
+
 #ifdef IODUMP
+    printf("===== PHYSICAL MEMORY AFTER WRITING =====\n");
     printf("write region=%d offset=%d value=%d\n", destination, offset, data);
 #ifdef PAGETBL_DUMP
     print_pgtbl(proc, 0, -1); // print max TBL

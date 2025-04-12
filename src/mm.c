@@ -173,7 +173,7 @@
              uint32_t victim_pte = caller->mm->pgd[vicpgn];
              int victim_fpn = PAGING_FPN(victim_pte);
              __swap_cp_page(caller->mram, victim_fpn, caller->active_mswp, swpfpn);
-             pte_set_swap(&victim_pte, 0, swpfpn);
+             pte_set_swap(&caller->mm->pgd[vicpgn], 0, swpfpn);
              struct framephy_struct *newfp = malloc(sizeof(struct framephy_struct));
              newfp->fpn = victim_fpn;
              newfp->owner = caller->mm;

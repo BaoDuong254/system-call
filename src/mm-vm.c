@@ -101,6 +101,20 @@ int validate_overlap_vm_area(struct pcb_t *caller, int vmaid, int vmastart, int 
         vma = vma->vm_next;
     }
     return 0;
+
+    /*
+    struct vm_area_struct *vma = get_vma_by_num(caller->mm, vmaid);
+    struct vm_rg_struct *rg = vma->vm_freerg_list;
+
+    while (rg != NULL) {
+        if (!(vmastart >= rg->rg_end || vmaend <= rg->rg_start)) {
+            return -1; 
+        }
+        rg = rg->rg_next;
+    }
+
+    return 0; 
+    */
 }
 
 /*inc_vma_limit - increase vm area limits to reserve space for new variable

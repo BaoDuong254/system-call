@@ -279,24 +279,25 @@ int pg_getval(struct mm_struct *mm, int addr, BYTE *data, struct pcb_t *caller)
      *  MEMPHY READ
      *  SYSCALL 17 sys_memmap with SYSMEM_IO_READ
      */
-    int phyaddr = fpn * PAGE_SIZE + off;
+    int phyaddr = fpn * PAGING_PAGESZ + off;
+    return MEMPHY_read(caller->mram, phyaddr, data);
     // BYTE tmp;
-    struct sc_regs regs;
-    regs.a1 = SYSMEM_IO_READ;
-    regs.a2 = (uint32_t)(*data);
-    regs.a3 = phyaddr;
+    // struct sc_regs regs;
+    // regs.a1 = SYSMEM_IO_READ;
+    // regs.a2 = (uint32_t)(*data);
+    // regs.a3 = phyaddr;
 
-    /* SYSCALL 17 sys_memmap */
-    int status = syscall(caller, 17, &regs);
-    if (status != 0)
-    {
-        pthread_mutex_unlock(&mmvm_lock);
-        return status;
-    }
-    // Update data
-    // data = (BYTE)
+    // /* SYSCALL 17 sys_memmap */
+    // int status = syscall(caller, 17, &regs);
+    // if (status != 0)
+    // {
+    //     pthread_mutex_unlock(&mmvm_lock);
+    //     return status;
+    // }
+    // // Update data
+    // // data = (BYTE)
 
-    return 0;
+    // return 0;
 }
 
 /*pg_setval - write value to given offset
@@ -320,23 +321,24 @@ int pg_setval(struct mm_struct *mm, int addr, BYTE value, struct pcb_t *caller)
      *  MEMPHY WRITE
      *  SYSCALL 17 sys_memmap with SYSMEM_IO_WRITE
      */
-    int phyaddr = fpn * PAGE_SIZE + off;
-    struct sc_regs regs;
-    regs.a1 = SYSMEM_IO_WRITE;
-    regs.a2 = (uint32_t)value;
-    regs.a3 = phyaddr;
+    int phyaddr = fpn * PAGING_PAGESZ + off;
+    return MEMPHY_write(caller->mram, phyaddr, value);
+    // struct sc_regs regs;
+    // regs.a1 = SYSMEM_IO_WRITE;
+    // regs.a2 = (uint32_t)value;
+    // regs.a3 = phyaddr;
 
-    /* SYSCALL 17 sys_memmap */
-    int status = syscall(caller, 17, &regs);
-    if (status != 0)
-    {
-        pthread_mutex_unlock(&mmvm_lock);
-        return status;
-    }
-    // Update data
-    // data = (BYTE)
+    // /* SYSCALL 17 sys_memmap */
+    // int status = syscall(caller, 17, &regs);
+    // if (status != 0)
+    // {
+    //     pthread_mutex_unlock(&mmvm_lock);
+    //     return status;
+    // }
+    // // Update data
+    // // data = (BYTE)
 
-    return 0;
+    // return 0;
 }
 
 /*__read - read value in region memory

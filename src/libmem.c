@@ -506,9 +506,6 @@ int get_free_vmrg_area(struct pcb_t *caller, int vmaid, int size, struct vm_rg_s
     if (rgit == NULL)
         return -1;
 
-    if (rgit == NULL)
-        return -1;
-
     /* Probe unintialized newrg */
     newrg->rg_start = newrg->rg_end = -1;
 
@@ -535,9 +532,7 @@ int get_free_vmrg_area(struct pcb_t *caller, int vmaid, int size, struct vm_rg_s
                 {
                     rgit->rg_start = nextrg->rg_start;
                     rgit->rg_end = nextrg->rg_end;
-
                     rgit->rg_next = nextrg->rg_next;
-
                     free(nextrg);
                 }
                 else
@@ -546,7 +541,7 @@ int get_free_vmrg_area(struct pcb_t *caller, int vmaid, int size, struct vm_rg_s
                     rgit->rg_next = NULL;
                 }
             }
-            return 0;
+            break;
         }
         else
         {
@@ -555,7 +550,9 @@ int get_free_vmrg_area(struct pcb_t *caller, int vmaid, int size, struct vm_rg_s
     }
 
     if (newrg->rg_start == -1)
+    {
         return -1;
+    }
 
     return 0;
 }

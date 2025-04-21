@@ -94,14 +94,20 @@ int __sys_killall(struct pcb_t *caller, struct sc_regs *regs)
         for (int prio = 0; prio < MAX_PRIO; prio++)
         {
             struct queue_t *q = &caller->mlq_ready_queue[prio];
-            for (int j = 0; j < q->size; j++)
+            for (int j = 0; j < q->size;)
             {
-                struct pcb_t *proc = q->proc[j];
-                if (proc && strstr(proc->path, proc_name))
+                struct pcb_t *p = q->proc[j];
+                if (p && strstr(p->path, proc_name))
                 {
-                    printf("  -> Kill mlq ready queue: %s (PID %d)\n", proc->path, proc->pid);
-                    free_process_memory(proc);
-                    q->proc[j] = NULL;
+                    printf("  -> Kill mlq ready queue: %s (PID %d)\n", p->path, p->pid);
+                    free_process_memory(p);
+                    for (int k = j; k + 1 < q->size; ++k)
+                        q->proc[k] = q->proc[k + 1];
+                    --q->size;
+                }
+                else
+                {
+                    ++j;
                 }
             }
         }

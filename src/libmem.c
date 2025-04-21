@@ -29,19 +29,57 @@ static pthread_mutex_t mmvm_lock = PTHREAD_MUTEX_INITIALIZER;
  *@rg_elmt: new region
  *
  */
+// int enlist_vm_freerg_list(struct mm_struct *mm, struct vm_rg_struct *rg_elmt)
+// {
+//     struct vm_rg_struct *rg_node = mm->mmap->vm_freerg_list;
+
+//     if (rg_elmt->rg_start >= rg_elmt->rg_end)
+//         return -1;
+
+//     if (rg_node != NULL)
+//         rg_elmt->rg_next = rg_node;
+
+//     /* Enlist the new region */
+//     mm->mmap->vm_freerg_list = rg_elmt;
+
+//     return 0;
+// }
+/*enlist_vm_freerg_list - add new rg to freerg_list, sorted + merged*/
 int enlist_vm_freerg_list(struct mm_struct *mm, struct vm_rg_struct *rg_elmt)
 {
-    struct vm_rg_struct *rg_node = mm->mmap->vm_freerg_list;
+    struct vm_rg_struct **prev = &mm->mmap->vm_freerg_list;
+    struct vm_rg_struct *cur = mm->mmap->vm_freerg_list;
 
     if (rg_elmt->rg_start >= rg_elmt->rg_end)
         return -1;
 
-    if (rg_node != NULL)
-        rg_elmt->rg_next = rg_node;
+    // 1) Chèn vào danh sách (theo start tăng dần)
+    while (cur && cur->rg_start < rg_elmt->rg_start)
+    {
+        prev = &cur->rg_next;
+        cur = cur->rg_next;
+    }
+    rg_elmt->rg_next = cur;
+    *prev = rg_elmt;
 
-    /* Enlist the new region */
-    mm->mmap->vm_freerg_list = rg_elmt;
-
+    // 2) Duyệt lại toàn bộ để gộp tất cả các vùng liền kề/overlap
+    cur = mm->mmap->vm_freerg_list;
+    while (cur && cur->rg_next)
+    {
+        if (cur->rg_end >= cur->rg_next->rg_start)
+        {
+            // hai vùng liền hoặc chồng -> mở rộng end
+            if (cur->rg_next->rg_end > cur->rg_end)
+                cur->rg_end = cur->rg_next->rg_end;
+            struct vm_rg_struct *tofree = cur->rg_next;
+            cur->rg_next = tofree->rg_next;
+            free(tofree);
+        }
+        else
+        {
+            cur = cur->rg_next;
+        }
+    }
     return 0;
 }
 

@@ -130,11 +130,11 @@ int inc_vma_limit(struct pcb_t *caller, int vmaid, int inc_sz)
     /* TODO: Obtain the new vm area based on vmaid */
     // cur_vma->vm_end...
     //  inc_limit_ret...
-    cur_vma->vm_end = area->rg_end;
 
     if (vm_map_ram(caller, area->rg_start, area->rg_end,
                    old_end, incnumpage, newrg) < 0)
         return -1; /* Map the memory to MEMRAM */
+    cur_vma->vm_end = area->rg_end;
     enlist_vm_rg_node(&cur_vma->vm_freerg_list, newrg);
     return 0;
 }

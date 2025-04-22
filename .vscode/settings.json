@@ -10,6 +10,8 @@
 		"string.h": "c",
 		"os-mm.h": "c",
 		"os-cfg.h": "c",
-		"mm.h": "c"
+		"mm.h": "c",
+		"mem.h": "c",
+		"cpu.h": "c"
 	}
 }

@@ -4,7 +4,7 @@
 #include "mm.h"
 #include "syscall.h"
 #include "libmem.h"
-
+#include <pthread.h>
 int calc(struct pcb_t *proc)
 {
 	return ((unsigned long)proc & 0UL);
@@ -57,10 +57,12 @@ int write(
 	// [destination] + [offset]
 	return write_mem(proc->regs[destination] + offset, proc, data);
 }
+static pthread_mutex_t mmvm_lock = PTHREAD_MUTEX_INITIALIZER;
 
 int run(struct pcb_t *proc)
 {
 	/* Check if Program Counter point to the proper instruction */
+    pthread_mutex_lock(&mmvm_lock);
 	if (proc->pc >= proc->code->size)
 	{
 		return 1;
@@ -108,5 +110,6 @@ switch (ins.opcode)
 	default:
 		stat = 1;
 	}
+    pthread_mutex_unlock(&mmvm_lock);
 	return stat;
 }

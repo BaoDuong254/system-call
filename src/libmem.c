@@ -107,7 +107,6 @@ struct vm_rg_struct *get_symrg_byid(struct mm_struct *mm, int rgid)
 int __alloc(struct pcb_t *caller, int vmaid, int rgid, int size, int *alloc_addr)
 {
     struct vm_rg_struct rgnode;
-    pthread_mutex_lock(&mmvm_lock);
 
     if (get_free_vmrg_area(caller, vmaid, size, &rgnode) == 0)
     {
@@ -121,11 +120,6 @@ int __alloc(struct pcb_t *caller, int vmaid, int rgid, int size, int *alloc_addr
     else
     {
         struct vm_area_struct *cur_vma = get_vma_by_num(caller->mm, vmaid);
-        if (cur_vma == NULL)
-        {
-            pthread_mutex_unlock(&mmvm_lock);
-            return -1;
-        }
 
         int inc_sz = PAGING_PAGE_ALIGNSZ(size);
 
@@ -144,11 +138,6 @@ int __alloc(struct pcb_t *caller, int vmaid, int rgid, int size, int *alloc_addr
             caller->mm->symrgtbl[rgid].rg_start = old_sbrk;
             caller->mm->symrgtbl[rgid].rg_end = old_sbrk + inc_sz;
             pthread_mutex_unlock(&mmvm_lock);
-        }
-        else
-        {
-            pthread_mutex_unlock(&mmvm_lock);
-            return -1;
         }
     }
     printf("===== PHYSICAL MEMORY AFTER ALLOCATION =====\n");

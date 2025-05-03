@@ -14,10 +14,11 @@
 #include "libmem.h"
 
 #include "queue.h" //! include more
+#include <pthread.h>
 #include <string.h>
 #include <stdlib.h>
 #include <ctype.h>
-
+static pthread_mutex_t syscall_lock = PTHREAD_MUTEX_INITIALIZER;
 void free_process_memory(struct pcb_t *proc)
 {
     for (int i = 0; i < PAGING_MAX_SYMTBL_SZ; i++)
@@ -74,7 +75,7 @@ int __sys_killall(struct pcb_t *caller, struct sc_regs *regs)
      *       all processes with given
      *        name in var proc_name
      */
-
+    pthread_mutex_lock(&syscall_lock);
     if (caller->running_list)
     {
         for (int i = 0; i < caller->running_list->size; i++)
@@ -88,7 +89,9 @@ int __sys_killall(struct pcb_t *caller, struct sc_regs *regs)
             }
         }
     }
+    pthread_mutex_unlock(&syscall_lock);
 
+    pthread_mutex_lock(&syscall_lock);
     if (caller->mlq_ready_queue)
     {
         for (int prio = 0; prio < MAX_PRIO; prio++)
@@ -112,6 +115,7 @@ int __sys_killall(struct pcb_t *caller, struct sc_regs *regs)
             }
         }
     }
+    pthread_mutex_unlock(&syscall_lock);
 
     // Chua ro co can kill ca ready_queue hay khong
     /*else if (caller->ready_queue)

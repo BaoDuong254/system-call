@@ -106,6 +106,7 @@ struct vm_rg_struct *get_symrg_byid(struct mm_struct *mm, int rgid)
  */
 int __alloc(struct pcb_t *caller, int vmaid, int rgid, int size, int *alloc_addr)
 {
+    pthread_mutex_lock(&mmvm_lock);
     struct vm_rg_struct rgnode;
 
     if (get_free_vmrg_area(caller, vmaid, size, &rgnode) == 0)
@@ -174,6 +175,7 @@ int __free(struct pcb_t *caller, int vmaid, int rgid)
     struct vm_rg_struct *freerg = (struct vm_rg_struct *)malloc(sizeof(struct vm_rg_struct));
     if (freerg == NULL)
         return -1;
+    pthread_mutex_lock(&mmvm_lock);
 
     freerg->rg_start = caller->mm->symrgtbl[rgid].rg_start;
     freerg->rg_end = caller->mm->symrgtbl[rgid].rg_end;
@@ -183,6 +185,7 @@ int __free(struct pcb_t *caller, int vmaid, int rgid)
 
     caller->mm->symrgtbl[rgid].rg_start = 0;
     caller->mm->symrgtbl[rgid].rg_end = 0;
+    pthread_mutex_unlock(&mmvm_lock);
     printf("===== PHYSICAL MEMORY AFTER DEALLOCATION =====\n");
 #ifdef IODUMP
     printf("PID=%d - Region=%d\n",
@@ -231,6 +234,7 @@ int libfree(struct pcb_t *proc, uint32_t reg_index)
  */
 int pg_getpage(struct mm_struct *mm, int pgn, int *fpn, struct pcb_t *caller)
 {
+    pthread_mutex_lock(&mmvm_lock);
     uint32_t pte = mm->pgd[pgn];
 
     if (!PAGING_PAGE_PRESENT(pte))

@@ -114,8 +114,6 @@ int __alloc(struct pcb_t *caller, int vmaid, int rgid, int size, int *alloc_addr
         caller->mm->symrgtbl[rgid].rg_end = rgnode.rg_end;
 
         *alloc_addr = rgnode.rg_start;
-
-        pthread_mutex_unlock(&mmvm_lock);
     }
     else
     {
@@ -137,9 +135,9 @@ int __alloc(struct pcb_t *caller, int vmaid, int rgid, int size, int *alloc_addr
         {
             caller->mm->symrgtbl[rgid].rg_start = old_sbrk;
             caller->mm->symrgtbl[rgid].rg_end = old_sbrk + inc_sz;
-            pthread_mutex_unlock(&mmvm_lock);
         }
     }
+    pthread_mutex_unlock(&mmvm_lock);
     printf("===== PHYSICAL MEMORY AFTER ALLOCATION =====\n");
 #ifdef IODUMP
     printf("PID=%d - Region=%d - Address=%08lx - Size=%d byte\n",
@@ -281,7 +279,7 @@ int pg_getpage(struct mm_struct *mm, int pgn, int *fpn, struct pcb_t *caller)
     }
 
     *fpn = PAGING_FPN(mm->pgd[pgn]);
-
+    pthread_mutex_unlock(&mmvm_lock);
     return 0;
 }
 

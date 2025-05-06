@@ -150,6 +150,14 @@ int alloc_pages_range(struct pcb_t *caller, int req_pgnum, struct framephy_struc
         else
         {
             // TODO: ERROR CODE of obtaining somes but not enough frames
+            struct framephy_struct *fpit = newfp_str;
+            while (fpit)
+            {
+                MEMPHY_put_freefp(caller->mram, fpit->fpn);
+                struct framephy_struct *next = fpit->fp_next;
+                free(fpit);
+                fpit = next;
+            }
             return -3000;
         }
     }
@@ -387,7 +395,7 @@ int print_pgtbl(struct pcb_t *caller, uint32_t start, uint32_t end)
     {
         printf("%08ld: %08x\n", pgit * sizeof(uint32_t), caller->mm->pgd[pgit]);
     }
-    
+
     //* Print Page Number and Frame Number
     for (pgit = pgn_start; pgit < pgn_end; pgit++)
     {

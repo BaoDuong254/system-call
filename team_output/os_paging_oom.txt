@@ -1,0 +1,37 @@
+Time slot   0
+ld_routine
+	Loaded a process at input/proc/oom, PID: 1 PRIO: 3
+	CPU 0: Dispatched process  1
+===== PHYSICAL MEMORY AFTER ALLOCATION =====
+PID=1 - Region=0 - Address=00000000 - Size=512 byte
+print_pgtbl: 0 - 512
+00000000: 80000001
+00000004: 80000000
+Page Number: 0 -> Frame Number: 1
+Page Number: 1 -> Frame Number: 0
+================================================================
+Time slot   1
+	CPU 0: Put process  1 to run queue
+	CPU 0: Dispatched process  1
+===== PHYSICAL MEMORY AFTER ALLOCATION =====
+PID=1 - Region=1 - Address=00000200 - Size=512 byte
+print_pgtbl: 0 - 1024
+00000000: 80000001
+00000004: 80000000
+00000008: 80000003
+00000012: 80000002
+Page Number: 0 -> Frame Number: 1
+Page Number: 1 -> Frame Number: 0
+Page Number: 2 -> Frame Number: 3
+Page Number: 3 -> Frame Number: 2
+================================================================
+Time slot   2
+	CPU 0: Put process  1 to run queue
+	CPU 0: Dispatched process  1
+OOM: vm_map_ram out of memory 
+Time slot   3
+	CPU 0: Put process  1 to run queue
+	CPU 0: Dispatched process  1
+Time slot   4
+	CPU 0: Processed  1 has finished
+	CPU 0 stopped

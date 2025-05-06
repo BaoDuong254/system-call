@@ -24,8 +24,8 @@ int __sys_memmap(struct pcb_t *caller, struct sc_regs* regs)
             /* Reserved process case*/
             break;
    case SYSMEM_INC_OP:
-            inc_vma_limit(caller, regs->a2, regs->a3);
-            break;
+            int ret = inc_vma_limit(caller, regs->a2, regs->a3);
+            return ret;
    case SYSMEM_SWP_OP:
             __mm_swap_page(caller, regs->a2, regs->a3);
             break;

@@ -129,7 +129,12 @@ int __alloc(struct pcb_t *caller, int vmaid, int rgid, int size, int *alloc_addr
         regs.a2 = vmaid;
         regs.a3 = inc_sz;
 
-        syscall(caller, 17, &regs);
+        int ret = syscall(caller, 17, &regs);
+        if (ret != 0)
+        {
+            pthread_mutex_unlock(&mmvm_lock);
+            return ret;
+        }
         cur_vma->sbrk = old_sbrk + inc_sz;
         *alloc_addr = old_sbrk;
         if (get_free_vmrg_area(caller, vmaid, size, &rgnode) == 0)

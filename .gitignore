@@ -92,3 +92,5 @@ CMakeUserPresets.json
 .DS_Store
 .code-workspace
 *.lst
+
+os 

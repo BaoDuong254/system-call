@@ -117,20 +117,5 @@ int __sys_killall(struct pcb_t *caller, struct sc_regs *regs)
     }
     pthread_mutex_unlock(&syscall_lock);
 
-    // Chua ro co can kill ca ready_queue hay khong
-    /*else if (caller->ready_queue)
-    {
-        for (int i = 0; i < caller->ready_queue->size; ++i)
-        {
-            struct pcb_t *p = caller->ready_queue->proc[i];
-            if (p && strstr(p->path, proc_name))
-            {
-                printf("  -> Kill ready queue: %s (PID %d)\n", p->path, p->pid);
-                free_process_memory(p);
-                caller->ready_queue->proc[i] = NULL;
-            }
-        }
-    }*/
-
     return 0;
 }

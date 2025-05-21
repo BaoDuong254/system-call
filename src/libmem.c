@@ -53,7 +53,6 @@ int enlist_vm_freerg_list(struct mm_struct *mm, struct vm_rg_struct *rg_elmt)
     if (rg_elmt->rg_start >= rg_elmt->rg_end)
         return -1;
 
-    // 1) Chèn vào danh sách (theo start tăng dần)
     while (cur && cur->rg_start < rg_elmt->rg_start)
     {
         prev = &cur->rg_next;
@@ -62,13 +61,11 @@ int enlist_vm_freerg_list(struct mm_struct *mm, struct vm_rg_struct *rg_elmt)
     rg_elmt->rg_next = cur;
     *prev = rg_elmt;
 
-    // 2) Duyệt lại toàn bộ để gộp tất cả các vùng liền kề/overlap
     cur = mm->mmap->vm_freerg_list;
     while (cur && cur->rg_next)
     {
         if (cur->rg_end >= cur->rg_next->rg_start)
         {
-            // hai vùng liền hoặc chồng -> mở rộng end
             if (cur->rg_next->rg_end > cur->rg_end)
                 cur->rg_end = cur->rg_next->rg_end;
             struct vm_rg_struct *tofree = cur->rg_next;
@@ -315,23 +312,6 @@ int pg_getval(struct mm_struct *mm, int addr, BYTE *data, struct pcb_t *caller)
      */
     int phyaddr = fpn * PAGING_PAGESZ + off;
     return MEMPHY_read(caller->mram, phyaddr, data);
-    // BYTE tmp;
-    // struct sc_regs regs;
-    // regs.a1 = SYSMEM_IO_READ;
-    // regs.a2 = (uint32_t)(*data);
-    // regs.a3 = phyaddr;
-
-    // /* SYSCALL 17 sys_memmap */
-    // int status = syscall(caller, 17, &regs);
-    // if (status != 0)
-    // {
-    //     pthread_mutex_unlock(&mmvm_lock);
-    //     return status;
-    // }
-    // // Update data
-    // // data = (BYTE)
-
-    // return 0;
 }
 
 /*pg_setval - write value to given offset
@@ -357,22 +337,6 @@ int pg_setval(struct mm_struct *mm, int addr, BYTE value, struct pcb_t *caller)
      */
     int phyaddr = fpn * PAGING_PAGESZ + off;
     return MEMPHY_write(caller->mram, phyaddr, value);
-    // struct sc_regs regs;
-    // regs.a1 = SYSMEM_IO_WRITE;
-    // regs.a2 = (uint32_t)value;
-    // regs.a3 = phyaddr;
-
-    // /* SYSCALL 17 sys_memmap */
-    // int status = syscall(caller, 17, &regs);
-    // if (status != 0)
-    // {
-    //     pthread_mutex_unlock(&mmvm_lock);
-    //     return status;
-    // }
-    // // Update data
-    // // data = (BYTE)
-
-    // return 0;
 }
 
 /*__read - read value in region memory
